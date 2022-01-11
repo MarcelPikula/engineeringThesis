@@ -1,0 +1,211 @@
+#include <Wire.h>
+
+#include "MAX30105.h"
+#include "spo2_algorithm.h"
+#include "heartRate.h"
+
+#include "time.h"
+
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+#include <Preferences.h>
+
+
+#define MAX_BRIGHTNESS 255
+#define NEW_BUFFOR_SIZE 15
+
+MAX30105 particleSensor;
+
+TwoWire I2CBME = TwoWire(0);
+
+Preferences preferences;
+
+//const char* ssid = "NETIASPOT-2.4GHz-4B85BC";
+////const char* ssid = "iPhone (Marcel)";
+//const char* ssid = "UPC241372070";
+const char* ssid = "PLAY Internet 4G LTE-175D29";
+//
+////const char* password = "2S3NEpFGhHVK";
+////const char* password = "Juleczka11";
+//const char* password = "7FZ7KRZF";
+const char* password = "30175D29";
+
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 3600;
+const int dayLightOffset_sec = 3600;
+struct tm timeinfo;
+
+
+const char* serverName = "http://192.168.1.238:8000/iSaturation/nowyOBD/";
+//
+uint32_t x = 400000;
+
+uint32_t irBuffer[100]; //ir LED sensor data
+uint32_t redBuffer[100];  //red LED sensor data
+//
+int32_t bufferLength; //data length
+int32_t spo2; //SPO2 value
+int8_t validSPO2; //indicator valid SpO2
+//
+//
+int32_t heartRate; //hr value
+int8_t validHeartRate; //indicator valid HR
+const byte RATE_SIZE = 4; //increase for more averaging
+byte rates[RATE_SIZE]; //Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; //when last beat occurred
+float beatsPerMinute;
+//
+int beatAvg;
+
+unsigned int nrPomiaru = 0;
+
+
+void setWifi(const char* ssid, const char* password){
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting");
+//  
+  while(WiFi.status() != WL_CONNECTED) {
+   delay(500);
+  Serial.print(".");
+  }
+//  
+ Serial.println("");
+ Serial.print("Connected to WiFi network with IP Address: ");
+ Serial.println(WiFi.localIP());
+ }
+//
+//
+void setupSensor(byte ledBrightness, byte sampleAverage, byte ledMode,
+                      byte sampleRate, int pulseWidth,int adcRange){
+//  /*
+//     ledBrightness Options: 0=Off to 255=50mA
+//     sampleAverage Options: 1, 2, 4, 8, 16, 32
+//     ledMode       Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+//     sampleRate    Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+//     pulseWidth    Options: 69, 118, 215, 411
+//     adcRange      Options: 2048, 4096, 8192, 16384
+//  */
+     Serial.println("Setting up sensor");
+     particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); 
+    }
+    
+
+void dumpingOldSamples(uint32_t redBuffer[], uint32_t irBuffer[]){
+  
+  //dumping the first 15 sets of samples in the memory and shift the last 85 sets of samples to the top
+  for (byte i = 15; i < 100; i++){
+      redBuffer[i - 15] = redBuffer[i];
+      irBuffer[i - 15] = irBuffer[i];
+    }
+    
+}
+
+void setup() {
+  
+  Serial.begin(115200);
+
+  setWifi(ssid, password); //initialize wifi
+
+//  preferences.begin("my-app", true); 
+//  nrPomiaru = preferences.getUInt("counter", 0);
+//  preferences.end();
+  
+  configTime(gmtOffset_sec, dayLightOffset_sec, ntpServer); //initialize ntp server connection
+
+  //I2CBME.begin(14,27, x); //change default I2C pins to custom
+  
+  
+  if (!particleSensor.begin(I2CBME)){                                    // Initialize sensor
+    Serial.println(F("MAX30105 was not found. Please check wiring/power."));
+    while (1);
+  }
+
+  Serial.println(F("Attach sensor to finger with rubber band. Press any key to start conversion"));
+  
+  while (Serial.available() == 0) ; //wait for user input to start
+  Serial.read();
+
+  setupSensor(30,4,2,byte(1000),411,4096); //setting up sensor 
+}
+
+void loop() {
+  
+  bufferLength = 100;
+
+  for (byte i = 0 ; i < bufferLength ; i++){
+    
+    while (particleSensor.available() == false) 
+      particleSensor.check(); 
+
+    redBuffer[i] = particleSensor.getIR();
+    irBuffer[i] = particleSensor.getRed();
+    particleSensor.nextSample(); 
+  }
+
+  maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+
+while (1)
+  {
+    dumpingOldSamples(redBuffer, irBuffer);
+
+    //take 15 sets of samples before calculating the heart rate.
+    for (byte i = 85; i < 100; i++)
+    {
+      while (particleSensor.available() == false) 
+        particleSensor.check(); 
+
+
+      redBuffer[i] = particleSensor.getIR();
+      irBuffer[i] = particleSensor.getRed();
+      particleSensor.nextSample(); 
+    }
+
+    //After gathering 15 new samples recalculate
+    maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+    
+    getLocalTime(&timeinfo);
+    char timestamp[30];
+    strftime(timestamp,30, "%Y-%B-%d %H:%M:%S", &timeinfo);
+  
+  if(validSPO2==1 && spo2>70){
+    if(WiFi.status()== WL_CONNECTED){
+
+      nrPomiaru++;
+      WiFiClient client;
+      HTTPClient http;
+
+      http.begin(serverName);
+
+      http.addHeader("Content-Type", "application/json");
+      String httpRequestData = "{\"number\":\"34\",\"nrPomiaru\":\"" + String(nrPomiaru) +"\",\"value\":\""+String(spo2)+"\", \"timestamp\":\""+String(timestamp)+"\"}";
+      int httpResponseCode = http.POST(httpRequestData);
+
+//      preferences.begin("my-app", false);
+//      preferences.putUInt("counter", nrPomiaru);
+//      preferences.end();
+
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+        
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+    
+    Serial.print(F("SPO2="));
+    Serial.println(spo2, DEC);
+  }else if(validSPO2==0){
+    
+    Serial.print(F("SPO2="));
+    Serial.println(spo2, DEC);
+  }
+
+  delay(3000);
+
+}
+}
