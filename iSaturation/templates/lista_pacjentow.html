@@ -1,0 +1,34 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %}Lista pacjentów{% endblock %}
+
+
+{% block strona  %}
+
+
+    <button>
+     <a style="text-decoration:none" href="{% url 'wszystkiepomiary' %}">Strona główna</a>
+    </button>
+
+    <button>
+       <a style="text-decoration:none" href="{% url 'nowy_pacjent' %}">Dodaj pacjenta</a>
+    </button>
+
+    {% for pacjent in pacjenci %}
+    <a style="text-decoration:none" href="{% url 'wybrany_pacjent' pacjent.id %}">
+        <button  href="{% url 'wybrany_pacjent' pacjent.id %}">
+            <h3> {{pacjent.imie}} {{pacjent.nazwisko}}</h3>
+            <p> Data urodzenia: {{pacjent.data_urodzenia}} </p>
+
+            {% if pacjent.plec == False %}
+            <p> Płeć: Kobieta </p>
+            {% else %}
+            <p> Płeć: Mężczyzna </p>
+            {% endif %}
+        </button>
+    </a>
+
+    {% endfor %}
+
+
+{% endblock %}a

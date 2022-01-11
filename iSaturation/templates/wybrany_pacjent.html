@@ -1,0 +1,93 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %}Podgląd pacjenta{% endblock %}
+
+{% block strona  %}
+
+    <button>
+     <a style="text-decoration:none" href="{% url 'wszystkiepomiary' %}">Strona główna</a>
+    </button>
+
+    <button>
+     <a style="text-decoration:none" href="{% url 'lista_pacjentow' %}">Lista pacjentów</a>
+    </button>
+
+{% for item in pacjent %}
+    <button>
+     <a style="text-decoration:none" href="{% url 'usun_pacjenta' item.id%}">Usuń pacjenta</a>
+    </button>
+
+    <button>
+     <a style="text-decoration:none" href="{% url 'eksportuj' item.id%}">Eksportuj dane pacjenta</a>
+    </button>
+{% endfor %}
+<br>
+<br>
+
+{% for item in pacjent %}
+    <h3>Dane pacjenta: {{item.imie}} {{item.nazwisko}}</h3>
+    <h3>Data urodzenia: {{item.data_urodzenia}}</h3>
+{% endfor %}
+
+{% if empty_list %}
+    <h3>Brak pomiarów!</h3>
+{% else %}
+    <div style="width: 700px;">
+        <canvas id="myChart" ></canvas>
+    </div>
+
+<script>
+        const labelsForChart = {{x_data_for_chart}};
+        var dataForChart ={{y_data_for_chart}}
+
+        const data = {
+
+             labels: labelsForChart,
+                datasets: [{
+                    label: 'SpO2 values',
+                    data:dataForChart,
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    fill: false,
+                }]
+            };
+
+            const config = {
+                type: 'line',
+                data,
+                options: {
+                    scales: {
+                    yAxes: [{
+                        display: true,
+                        stacked: true,
+                        ticks: {
+                            min: 50, // minimum value
+                            max: 100 // maximum value
+                        }
+                    }]
+                }
+                }
+
+            };
+
+            var options = {
+                scales: {
+                    yAxes: [{
+                        display: true,
+                        stacked: true,
+                        ticks: {
+                            min: 0, // minimum value
+                            max: 100 // maximum value
+                        }
+                    }]
+                }
+            };
+
+            const myChart = new Chart(
+                document.getElementById('myChart'),
+                config
+            );
+</script>
+{% endif %}
+{% endblock %}
+

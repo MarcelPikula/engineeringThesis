@@ -1,0 +1,79 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %} Home Page {% endblock %}
+
+{% block strona  %}
+<div class="container">
+    <div class="row" style="padding-top: 3rem;">
+        <div class="col-2" style="background-color: #3FC1C9; color: #F5F5F5; border-radius: 10px; text-align: left; ">
+            <h1 style="font-size: xx-large;">iSaturation</h1>
+        </div>
+        <div class="col-8"></div>
+        <div class="col">
+            {% if user.is_authenticated  %}
+                <a style="text-decoration:none" href="{% url 'logout' %}">
+                    <button style="background-color: #3FC1C9; color: #F5F5F5; border: none; padding-inline: 3rem;
+                    padding-top: 5px; padding-bottom: 5px; border-radius: 10px;">
+                        Logout
+                    </button>
+                </a>
+            {% else %}
+                <a style="text-decoration:none" href="{% url 'login' %}">
+                    <button type="button" style="background-color: #3FC1C9; color: #F5F5F5; padding-inline: 3rem;
+                    padding-top: 5px; padding-bottom: 5px; border: none;  border-radius: 10px;">
+                        Login
+                    </button>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+    <center>
+    <h2>Ilość urządzeń: {{ allUniqId|length }} Ilość pacjentów: {{ pacjenci|length }} </h2>
+    </center>
+
+    <div class="container">
+      <div class="row" >
+        <div class="col" style="background-color: #364F6B; border-radius: 10px;">
+            <div class="row">
+                <div style="padding: 5px;">
+                        <div style=" color: #F5F5F5; border: none; background-color: #FC5185; border-radius: 10px; padding: 5px;
+                         text-align: center">
+                            {% if user.is_authenticated  %}
+                             Witaj Doktorze, {{ user.username }}.
+                            {% endif %}
+                        </div>
+                </div>
+            </div>
+            <div class="row" style="padding: 5px;">
+                <button type="button" style="background-color: #3FC1C9;  border: none; padding: 5px; border-radius: 10px;">
+                    <a style="text-decoration:none; color: #F5F5F5; " href="{% url 'nowy_pacjent' %}">Dodaj pacjenta</a>
+                </button>
+            </div>
+            <div class="row" style="padding: 5px;">
+                <button type="button" style="background-color: #3FC1C9;  border: none; padding: 5px; border-radius: 10px;" >
+                    <a style="text-decoration:none; color: #F5F5F5;" href="{% url 'lista_pacjentow' %}">Lista pacjentów</a>
+                </button>
+            </div>
+        </div>
+        <div class="col-8">
+            {%  for pacjent in pacjenci %}
+                {%  for urzadzenie in lista_ostatnich_wartosci %}
+                    {% if urzadzenie.number == pacjent.id %}
+                        <hr>
+                        <h3> {{pacjent.imie}} {{pacjent.nazwisko}}</h3>
+                        <h3>Ostatnia zmierzona wartość: {{urzadzenie.value}}</h3>
+                    {%else%}
+                    {% endif %}
+                {% endfor %}
+            {%endfor%}
+            <hr>
+        </div>
+        <div class="col">
+        </div>
+      </div>
+    <br>
+    <br>
+</div>
+{% endblock %}

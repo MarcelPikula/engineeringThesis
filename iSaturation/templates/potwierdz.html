@@ -1,0 +1,15 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %}Edytuj {% endblock %}
+
+
+{% block strona  %}
+    <h2>Czy napewno chcesz usunąć pacjenta: {{pacjent.imie}} {{pacjent.nazwisko}} oraz jego {{liczba_pomiarow|length}} pomiarów?</h2>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">
+    Usuń pacjenta
+    </button>
+</form>
+<a href="{% url 'wybrany_pacjent' pacjent.id  %}">Cofnij</a>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %}LogIn {% endblock %}
+
+
+{% block strona  %}
+<center>
+    <div style="padding: 4rem;">
+    <div class="card" style="width: 22rem;">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-sign-in-alt"></i> Zaloguj się </h5>
+        <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-outline-success"><i class="fas fa-sign-in-alt"></i> Zaloguj</button>
+        </form>
+      </div>
+    </div>
+    </div>
+    </center>
+{% endblock %}

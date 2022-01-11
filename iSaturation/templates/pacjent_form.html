@@ -1,0 +1,15 @@
+{% extends 'glowny.html' %}
+
+{% block tytul  %}Nowy pacjent{% endblock %}
+
+
+{% block strona  %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{form}}
+        <button type="submit">{{ button }} pacjenta</button>
+    </form>
+
+    <a href="{% url 'wszystkiepomiary'  %}"><button>Cofnij</button></a>
+
+{% endblock %}a
